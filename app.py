@@ -20,6 +20,7 @@ totalValores = 0  # Variable para almacenar el total de ventas de todos los usua
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html')
@@ -29,9 +30,8 @@ def index():
 
 @ app.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+    username = request.form.get('username')
+    password = request.form.get('password')
 
     if username in users_db:
         return jsonify({'message': 'User already exists'}), 409
@@ -51,9 +51,8 @@ def register():
 
 @ app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+    username = request.form.get('username')
+    password = request.form.get('password')
 
     hashed_password = hash_password(password)
 
@@ -65,7 +64,7 @@ def login():
                 'ventas': user['ventas'],
                 'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
             }, app.config['SECRET_KEY'], algorithm='HS256')
-            return jsonify({'token': token}), 200
+            return render_template('index.html', token=token)
 
     return jsonify({'message': 'Invalid credentials'}), 401
 
@@ -92,7 +91,13 @@ def validate():
 
 @ app.route('/ventas', methods=['POST'])
 def registrarVenta():
-    venta = request.get_json()
+    venta = {
+        'producto': request.form.get('producto'),
+        'cantidad': request.form.get('cantidad'),
+        'precio': request.form.get('precio'),
+    }
+
+    venta['total'] = int(venta['cantidad']) * int(venta['precio'])
     username = request.headers.get('username')
 
     for user in users_db:
