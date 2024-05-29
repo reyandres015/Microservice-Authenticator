@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import jwt
 import datetime
 import hashlib
 import socket
 import threading
+import unittest
+from flask.testing import FlaskClient
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
@@ -18,10 +20,14 @@ totalValores = 0  # Variable para almacenar el total de ventas de todos los usua
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+@app.route('/', methods=['GET'])
+def index():
+    return render_template('index.html')
+
 # Ruta para registrar un nuevo usuario
 
 
-@app.route('/register', methods=['POST'])
+@ app.route('/register', methods=['POST'])
 def register():
     data = request.get_json()
     username = data.get('username')
@@ -43,7 +49,7 @@ def register():
 # Ruta para autenticar a un usuario y generar un token JWT
 
 
-@app.route('/login', methods=['POST'])
+@ app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     username = data.get('username')
@@ -66,7 +72,7 @@ def login():
 # Ruta para validar el token JWT
 
 
-@app.route('/validate', methods=['POST'])
+@ app.route('/validate', methods=['POST'])
 def validate():
     token = request.headers.get('Authorization')
     if not token:
@@ -81,8 +87,10 @@ def validate():
     except jwt.InvalidTokenError:
         return jsonify({'message': 'Invalid token'}), 401
 
+# Ruta para registrar ventas
 
-@app.route('/ventas', methods=['POST'])
+
+@ app.route('/ventas', methods=['POST'])
 def registrarVenta():
     venta = request.get_json()
     username = request.headers.get('username')
@@ -95,8 +103,10 @@ def registrarVenta():
 
     return jsonify({'message': 'Usuario no encontrado'}), 404
 
+# Sumar total de ventas
 
-@app.route('/sumarVentas', methods=['POST'])
+
+@ app.route('/sumarVentas', methods=['POST'])
 def sumarVenta():
     global totalValores
     valor = request.get_json()
@@ -134,5 +144,42 @@ tcp_thread = threading.Thread(target=start_tcp_server)
 tcp_thread.daemon = True
 tcp_thread.start()
 
+
+class TestRoutes(unittest.TestCase):
+    def setUp(self):
+        self.app = app.test_client()
+        self.app.testing = True
+
+    def test_register(self):
+        user_data = {
+            'username': 'testuser',
+            'password': 'testpassword',
+            'ventas': [],
+            'total': 0,
+        }
+        result = self.app.post(
+            '/register', json=user_data)
+        self.assertEqual(result.status_code, 201)
+
+    def test_login(self):
+        user_data = {
+            'username': 'testuser',
+            'password': 'testpassword',
+        }
+        result = self.app.post(
+            '/login', json=user_data)
+        self.assertEqual(result.status_code, 200)
+
+    def test_registrarVenta(self):
+        result = self.app.post(
+            '/ventas', json={'valor': 100}, headers={'username': 'testuser'})
+        self.assertEqual(result.status_code, 200)
+
+    def test_sumarVenta(self):
+        result = self.app.post('/sumarVentas', json=100)
+        self.assertEqual(result.status_code, 200)
+
+
 if __name__ == '__main__':
+    # unittest.main()
     app.run(debug=True)

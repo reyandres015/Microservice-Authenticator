@@ -57,6 +57,7 @@ def postVenta(venta):
 
 
 def postValorTotal(valor):
+    print(valor)
     response = requests.post(f'{base_url}/sumarVentas', json=valor)
     print('Valor total de venta por usuario:', response.json())
 
